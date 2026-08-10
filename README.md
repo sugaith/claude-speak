@@ -135,9 +135,16 @@ Override the location with `CLAUDE_SPEAK_HOME`.
 - `skills/*/SKILL.md` — teach Claude to map "stop talking" / "different voice" /
   "say that again, slower" onto the right command.
 
-The hook runs `async`, so speech never blocks a turn. Every reply is cached to
-`~/.claude-speak/.last.raw.txt` even while muted, so `/repeat` still works after
-`/speak off`.
+The hook runs `async`, so speech never blocks a turn.
+
+Every reply is cached under `~/.claude-speak/sessions/<session-id>.json` even
+while muted, so `/repeat` still works after `/speak off`. State is keyed by
+session: run five Claude sessions at once and each `/repeat` replays its own
+last reply, not whichever session finished most recently. Stale session files
+are pruned after 30 days.
+
+Editing these scripts takes effect immediately — the hook spawns a fresh process
+each turn. Only `settings.json` changes need `/hooks` or a restart.
 
 ## License
 

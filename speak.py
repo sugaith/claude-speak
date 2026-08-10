@@ -12,6 +12,7 @@ import re
 import signal
 import subprocess
 import sys
+import time
 import urllib.request
 import wave
 
@@ -53,30 +54,57 @@ def save_config(cfg):
         f.write("\n")
 
 
-LAST_RAW_PATH = os.path.join(HOME_DIR, ".last.raw.txt")
-LAST_SPOKEN_PATH = os.path.join(HOME_DIR, ".last.spoken.txt")
+SESSIONS_DIR = os.path.join(HOME_DIR, "sessions")
+STATE_TTL_DAYS = 30
 
 
-def cache_last(raw, spoken):
+def session_id(explicit=None):
+    """Per-session key. Concurrent sessions must not clobber each other."""
+    return explicit or os.environ.get("CLAUDE_CODE_SESSION_ID") or "default"
+
+
+def _state_path(sid):
+    return os.path.join(SESSIONS_DIR, sid + ".json")
+
+
+def load_state(sid=None):
+    try:
+        with open(_state_path(session_id(sid))) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
+
+
+def save_state(sid=None, **fields):
+    os.makedirs(SESSIONS_DIR, exist_ok=True)
+    sid = session_id(sid)
+    state = load_state(sid)
+    state.update({k: v for k, v in fields.items() if v})
+    with open(_state_path(sid), "w") as f:
+        json.dump(state, f)
+    _prune_states()
+
+
+def _prune_states():
+    cutoff = time.time() - STATE_TTL_DAYS * 86400
+    try:
+        for name in os.listdir(SESSIONS_DIR):
+            path = os.path.join(SESSIONS_DIR, name)
+            if os.path.getmtime(path) < cutoff:
+                os.remove(path)
+    except OSError:
+        pass
+
+
+def cache_last(raw, spoken, sid=None):
     """Remember the last reply so /repeat can replay it without the hook."""
-    os.makedirs(HOME_DIR, exist_ok=True)
-    if raw:
-        with open(LAST_RAW_PATH, "w") as f:
-            f.write(raw)
-    if spoken:
-        with open(LAST_SPOKEN_PATH, "w") as f:
-            f.write(spoken)
+    save_state(sid, raw=raw, spoken=spoken)
 
 
-def load_last():
-    """(raw_reply, spoken_line); either may be empty."""
-    def read(path):
-        try:
-            with open(path) as f:
-                return f.read()
-        except OSError:
-            return ""
-    return read(LAST_RAW_PATH), read(LAST_SPOKEN_PATH)
+def load_last(sid=None):
+    """(raw_reply, spoken_line) for this session; either may be empty."""
+    state = load_state(sid)
+    return state.get("raw", ""), state.get("spoken", "")
 
 
 def api_key():

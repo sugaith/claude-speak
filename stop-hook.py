@@ -14,21 +14,12 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import speak as tts  # noqa: E402
 import transcript  # noqa: E402
 
-LAST_HASH_PATH = os.path.join(tts.HOME_DIR, ".last.hash")
-
-
-def already_spoken(text):
+def already_spoken(text, sid):
     """Stop also fires on /clear, resume and compact -- don't repeat ourselves."""
-    os.makedirs(tts.HOME_DIR, exist_ok=True)
     digest = hashlib.sha256(text.encode()).hexdigest()
-    try:
-        with open(LAST_HASH_PATH) as f:
-            if f.read().strip() == digest:
-                return True
-    except OSError:
-        pass
-    with open(LAST_HASH_PATH, "w") as f:
-        f.write(digest)
+    if tts.load_state(sid).get("hash") == digest:
+        return True
+    tts.save_state(sid, hash=digest)
     return False
 
 
@@ -42,22 +33,23 @@ def main():
         return
 
     cfg = tts.load_config()
+    sid = tts.session_id(payload.get("session_id"))
     path = payload.get("transcript_path") or transcript.find_transcript()
     raw = transcript.last_assistant_text(path)
     if not raw.strip():
         return
 
     # Cache before the enabled check, so /repeat works even while muted.
-    tts.cache_last(raw, "")
+    tts.cache_last(raw, "", sid)
 
     if not cfg.get("enabled") or cfg.get("mode") == "off":
         return
-    if already_spoken(raw):
+    if already_spoken(raw, sid):
         return
 
     line = tts.shape(raw, cfg)
     if line:
-        tts.cache_last(raw, line)
+        tts.cache_last(raw, line, sid)
         tts.speak(line, cfg)
 
 
