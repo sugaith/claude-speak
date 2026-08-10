@@ -41,10 +41,12 @@ The installer updates existing `skills/` symlinks in place, but a running sessio
 only enumerates slash commands at startup — restart once for `/speak` and
 `/repeat` to appear.
 
-## API key
+## Gemini API key
 
-Only the `gemini` backend needs one. `say` and `kokoro` need nothing, and any
-backend failure falls back to `say`, so the tool works before you set this up.
+Of the backends that ship today, only `gemini` needs a key — `say` and `kokoro`
+need nothing, and any backend failure falls back to `say`, so the tool works
+before you set this up. Future hosted backends will document their own keys
+under their own heading; nothing here is a shared credential.
 
 Get a key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey),
 then pick one of two places for it:
