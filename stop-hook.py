@@ -12,33 +12,9 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import speak as tts  # noqa: E402
+import transcript  # noqa: E402
 
 LAST_HASH_PATH = os.path.join(tts.HOME_DIR, ".last.hash")
-
-
-def last_assistant_text(transcript_path):
-    """Final main-thread assistant message. Subagent (sidechain) turns are skipped."""
-    try:
-        with open(transcript_path) as f:
-            lines = f.readlines()
-    except OSError:
-        return ""
-
-    for line in reversed(lines):
-        try:
-            entry = json.loads(line)
-        except ValueError:
-            continue
-        if entry.get("type") != "assistant" or entry.get("isSidechain"):
-            continue
-        content = entry.get("message", {}).get("content", [])
-        if isinstance(content, str):
-            return content
-        text = "\n".join(b.get("text", "") for b in content
-                         if isinstance(b, dict) and b.get("type") == "text")
-        if text.strip():
-            return text
-    return ""
 
 
 def already_spoken(text):
@@ -66,15 +42,22 @@ def main():
         return
 
     cfg = tts.load_config()
-    if not cfg.get("enabled") or cfg.get("mode") == "off":
+    path = payload.get("transcript_path") or transcript.find_transcript()
+    raw = transcript.last_assistant_text(path)
+    if not raw.strip():
         return
 
-    raw = last_assistant_text(payload.get("transcript_path", ""))
-    if not raw.strip() or already_spoken(raw):
+    # Cache before the enabled check, so /repeat works even while muted.
+    tts.cache_last(raw, "")
+
+    if not cfg.get("enabled") or cfg.get("mode") == "off":
+        return
+    if already_spoken(raw):
         return
 
     line = tts.shape(raw, cfg)
     if line:
+        tts.cache_last(raw, line)
         tts.speak(line, cfg)
 
 
@@ -82,5 +65,5 @@ if __name__ == "__main__":
     try:
         main()
     except Exception as e:
-        print(f"[tts hook] {e}", file=sys.stderr)
+        print(f"[claude-speak] {e}", file=sys.stderr)
     sys.exit(0)

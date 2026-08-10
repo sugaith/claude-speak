@@ -53,6 +53,32 @@ def save_config(cfg):
         f.write("\n")
 
 
+LAST_RAW_PATH = os.path.join(HOME_DIR, ".last.raw.txt")
+LAST_SPOKEN_PATH = os.path.join(HOME_DIR, ".last.spoken.txt")
+
+
+def cache_last(raw, spoken):
+    """Remember the last reply so /repeat can replay it without the hook."""
+    os.makedirs(HOME_DIR, exist_ok=True)
+    if raw:
+        with open(LAST_RAW_PATH, "w") as f:
+            f.write(raw)
+    if spoken:
+        with open(LAST_SPOKEN_PATH, "w") as f:
+            f.write(spoken)
+
+
+def load_last():
+    """(raw_reply, spoken_line); either may be empty."""
+    def read(path):
+        try:
+            with open(path) as f:
+                return f.read()
+        except OSError:
+            return ""
+    return read(LAST_RAW_PATH), read(LAST_SPOKEN_PATH)
+
+
 def api_key():
     key = os.environ.get("GEMINI_API_KEY") or load_config().get("gemini_api_key")
     if not key:
@@ -69,9 +95,12 @@ TABLE_ROW_RE = re.compile(r"^\s*\|.*\|\s*$")
 HEADING_RE = re.compile(r"^#{1,6}\s*")
 BULLET_RE = re.compile(r"^\s*[-*+]\s+|^\s*\d+[.)]\s+")
 EMPHASIS_RE = re.compile(r"\*\*([^*]+)\*\*|\*([^*]+)\*|__([^_]+)__")
+# Paths, but not slash-commands: /speak survives, /Users/me/x.py does not.
 PATHY_RE = re.compile(
-    r"(?<!\w)(?:~|\.{1,2})?/[\w.~/-]+"
-    r"|(?<!\w)[\w.-]+\.(?:py|ts|tsx|js|jsx|json|md|sh|go|rs|java|yml|yaml)\b")
+    r"(?<!\w)[\w.-]+(?:/[\w.-]+)*"
+    r"\.(?:py|ts|tsx|js|jsx|json|md|sh|go|rs|java|yml|yaml)\b"
+    r"|(?<!\w)(?:~|\.{1,2})/[\w.~/-]+"
+    r"|(?<!\w)/[\w.~-]*[/.][\w.~/-]*")
 EMOJI_RE = re.compile(
     "[\U0001F000-\U0001FAFF←-⇿☀-➿⬀-⯿️]")
 URL_RE = re.compile(r"https?://\S+")
@@ -217,7 +246,10 @@ def speak_gemini(text, cfg):
 
 def speak_say(text, cfg):
     stop_playing()
-    proc = subprocess.Popen(["say", "-v", cfg["say_voice"], text])
+    argv = ["say", "-v", cfg["say_voice"]]
+    if cfg.get("say_rate"):
+        argv += ["-r", str(cfg["say_rate"])]
+    proc = subprocess.Popen(argv + [text])
     with open(PID_PATH, "w") as f:
         f.write(str(proc.pid))
     proc.wait()

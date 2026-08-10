@@ -4,7 +4,7 @@ Claude Code reads its replies out loud.
 
 A `Stop` hook grabs Claude's last message, strips everything that sounds terrible
 spoken (code fences, tables, file paths, emoji), and pipes it to a TTS backend.
-Control it from inside Claude with `/speak`.
+Control it from inside Claude with `/speak`, replay it with `/repeat`.
 
 ```
 /speak                  # what's it set to?
@@ -12,6 +12,11 @@ Control it from inside Claude with `/speak`.
 /speak mode prose       # read the whole reply, not just the gist
 /speak voice Puck       # different voice
 /speak lang pt          # Portuguese
+
+/repeat                 # say that again
+/repeat all             # the whole reply this time
+/repeat slow            # ...slower
+/repeat 3               # three replies back
 ```
 
 ## Install
@@ -95,8 +100,20 @@ speakctl stop                       # kill playback
 speakctl reset
 ```
 
-Run directly as `python3 speakctl.py <args>` — or just say it to Claude and let
-the `/speak` skill do the mapping.
+```
+repeat                              # last spoken line again, verbatim
+repeat all                          # the full last reply, uncapped
+repeat brief|prose|smart            # re-shape the last reply
+repeat slow                         # slower delivery
+repeat <n>                          # n replies back (1 = last)
+repeat list                         # recent replies, without speaking
+repeat text <words>                 # speak arbitrary text
+repeat show [cmd]                   # print instead of speaking
+```
+
+Both live in `~/.claude-speak/bin/`. Run them directly as
+`python3 ~/.claude-speak/bin/speakctl.py <args>` — or just say what you want to
+Claude and let the `/speak` and `/repeat` skills do the mapping.
 
 ## Config
 
@@ -109,15 +126,18 @@ Override the location with `CLAUDE_SPEAK_HOME`.
 ## How it works
 
 - `stop-hook.py` — reads the hook payload, pulls the last main-thread assistant
-  message out of the JSONL transcript (subagent turns skipped), de-dupes against
-  the previously spoken message, shapes, speaks. Always exits 0 — a broken
-  speaker must never break a turn.
+  message out of the transcript, de-dupes against the previously spoken message,
+  shapes, speaks. Always exits 0 — a broken speaker must never break a turn.
 - `speak.py` — markdown cleanup, mode shaping, backend routing, playback.
-- `speakctl.py` — the CLI behind `/speak`.
-- `skill/SKILL.md` — teaches Claude to map "stop talking" / "different voice" /
-  "speak Portuguese" onto the right command.
+- `transcript.py` — locates this session's JSONL transcript and reads assistant
+  turns out of it (subagent turns skipped).
+- `speakctl.py` / `repeat.py` — the CLIs behind `/speak` and `/repeat`.
+- `skills/*/SKILL.md` — teach Claude to map "stop talking" / "different voice" /
+  "say that again, slower" onto the right command.
 
-The hook runs `async`, so speech never blocks a turn.
+The hook runs `async`, so speech never blocks a turn. Every reply is cached to
+`~/.claude-speak/.last.raw.txt` even while muted, so `/repeat` still works after
+`/speak off`.
 
 ## License
 

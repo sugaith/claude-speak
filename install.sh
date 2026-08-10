@@ -18,6 +18,8 @@ fi
 
 # Shared config + runtime state, so every config dir speaks with one voice.
 mkdir -p "$HOME_DIR"
+# Stable path to the scripts, so skills don't hardcode wherever you cloned this.
+ln -sfn "$SRC" "$HOME_DIR/bin"
 if [ ! -f "$HOME_DIR/config.json" ]; then
   cp "$SRC/config.default.json" "$HOME_DIR/config.json"
   echo "seeded $HOME_DIR/config.json"
@@ -47,8 +49,11 @@ for CFG in "${TARGETS[@]}"; do
   [ -d "$CFG" ] || { echo "skip $CFG (not a directory)"; continue; }
 
   mkdir -p "$CFG/skills"
-  rm -rf "$CFG/skills/speak"
-  ln -s "$SRC/skill" "$CFG/skills/speak"
+  for SKILL in "$SRC"/skills/*/; do
+    NAME="$(basename "$SKILL")"
+    rm -rf "$CFG/skills/$NAME"
+    ln -s "${SKILL%/}" "$CFG/skills/$NAME"
+  done
 
   SRC="$SRC" PYTHON="$PYTHON" "$PYTHON" - "$CFG/settings.json" <<'PY'
 import json, os, sys
@@ -90,5 +95,5 @@ done
 
 echo
 echo "installed. shared config: $HOME_DIR/config.json"
-echo "try:  $PYTHON $SRC/speakctl.py test"
+echo "try:  $PYTHON $HOME_DIR/bin/speakctl.py test"
 echo "note: open /hooks once (or restart) in any running session to load the hook."

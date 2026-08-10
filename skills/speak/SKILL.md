@@ -5,15 +5,16 @@ description: Control spoken replies (TTS). Turn Claude's voice on/off, switch ho
 
 # Speak
 
-A Stop hook (`~/.claude-suga/tts/stop-hook.py`) speaks the last assistant message after
-every turn. This skill is the control surface for it.
+A Stop hook (`~/.claude-speak/bin/stop-hook.py`) speaks the last assistant message
+after every turn. This skill is the control surface for it. To replay something
+already said, use the `repeat` skill instead.
 
 ## How to run
 
 Run the control CLI and report its output verbatim:
 
 ```
-python3 ~/.claude-suga/tts/speakctl.py <args>
+python3 ~/.claude-speak/bin/speakctl.py <args>
 ```
 
 With no arguments it prints current settings. `help` prints the full command list.
@@ -53,7 +54,7 @@ and offline but its Portuguese voices are weak.
 
 ## Notes
 
-- Config lives at `~/.claude-suga/tts/config.json` — edit directly for anything the CLI
+- Config lives at `~/.claude-speak/config.json` — edit directly for anything the CLI
   doesn't cover (`max_chars_prose`, `max_chars_brief`, `summarizer_model`).
 - The hook is async, so speech never blocks a turn.
 - Backend failures fall back to `say` rather than going silent.
