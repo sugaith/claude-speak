@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "mode": "brief",
+  "backend": "gemini",
+  "gemini_model": "gemini-2.5-flash-preview-tts",
+  "gemini_voice": "Kore",
+  "summarizer_model": "gemini-2.5-flash-lite",
+  "say_voice": "Samantha",
+  "kokoro_voice": "af_heart",
+  "kokoro_lang": "a",
+  "max_chars_prose": 600,
+  "max_chars_brief": 220,
+  "style": ""
+}
