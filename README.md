@@ -37,6 +37,48 @@ dir speaks with the same voice.
 
 Already-running sessions load the hook after you open `/hooks` once, or restart.
 
+The installer updates existing `skills/` symlinks in place, but a running session
+only enumerates slash commands at startup — restart once for `/speak` and
+`/repeat` to appear.
+
+## API key
+
+Only the `gemini` backend needs one. `say` and `kokoro` need nothing, and any
+backend failure falls back to `say`, so the tool works before you set this up.
+
+Get a key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey),
+then pick one of two places for it:
+
+**Environment variable** (preferred — keeps the key out of every file):
+
+```bash
+echo 'export GEMINI_API_KEY="your-key-here"' >> ~/.zshrc
+```
+
+Claude Code passes its environment to hooks, so restart your shell *and* Claude
+Code afterwards. This is also the variable `gemini` CLI and most Google SDKs
+already use, so you may have it set.
+
+**Or in the config file**, if you'd rather not touch your shell profile:
+
+```json
+{ "gemini_api_key": "your-key-here" }
+```
+
+in `~/.claude-speak/config.json`. That file lives outside this repo and is
+created by the installer, so a key there can never be committed by accident.
+Nothing in the repo reads, stores, or transmits your key anywhere except to
+`generativelanguage.googleapis.com`.
+
+The env var wins if both are set. Verify with:
+
+```bash
+python3 ~/.claude-speak/bin/speakctl.py test
+```
+
+If the key is missing you'll hear the sample in the macOS voice instead of the
+Gemini one, with the reason on stderr.
+
 ## Modes
 
 How much of the reply gets spoken:
