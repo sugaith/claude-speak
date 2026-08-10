@@ -29,8 +29,10 @@ With no arguments it prints current settings. `help` prints the full command lis
 | "read the whole thing" | `mode prose` |
 | "just the gist", "one line" | `mode brief` |
 | "summarize it properly" | `mode smart` |
-| "use a local/offline voice" | `backend kokoro` |
-| "no API calls", "use the mac voice" | `backend say` |
+| "switch to X", "use X", "change the model/engine" | `use gemini\|say\|kokoro` |
+| "use a local/offline voice" | `use kokoro` |
+| "no API calls", "use the mac voice" | `use say` |
+| "which one is it using?" | *(no args)* |
 | "different voice" | `voices`, then `voice <name>` |
 | "speak Portuguese" | `lang pt` |
 | "sound calmer/excited/etc" | `style Say it <adjective>:` |

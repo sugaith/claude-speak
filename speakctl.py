@@ -18,14 +18,16 @@ GEMINI_VOICES = [
 
 MODES = ("prose", "brief", "smart", "off")
 BACKENDS = ("gemini", "say", "kokoro")
+BACKEND_CMDS = ("use", "backend", "provider", "engine")
 
 USAGE = """usage: speakctl <command>
 
   status                 show current settings
   on | off               enable / disable spoken replies
   mode prose|brief|smart set how much gets spoken
-  backend gemini|say|kokoro
-  voice <name>           set voice for the active backend
+  use gemini|say|kokoro  switch TTS engine (aliases: backend, provider, engine;
+                         or just name it: `speakctl kokoro`)
+  voice <name>           set voice for the active engine
   model <id>             set the Gemini TTS model
   style <text>           Gemini delivery style, e.g. "Say it calm:" ("" clears)
   lang pt|en             shortcut: switch voice+lang for Portuguese/English
@@ -94,10 +96,10 @@ def main():
             sys.exit(f"mode must be one of: {', '.join(MODES)}")
         cfg["mode"] = mode
         cfg["enabled"] = mode != "off"
-    elif cmd == "backend" or cmd in BACKENDS:
-        backend = cmd if cmd in BACKENDS else arg
+    elif cmd in BACKEND_CMDS or cmd in BACKENDS:
+        backend = cmd if cmd in BACKENDS else arg.lower()
         if backend not in BACKENDS:
-            sys.exit(f"backend must be one of: {', '.join(BACKENDS)}")
+            sys.exit(f"engine must be one of: {', '.join(BACKENDS)}")
         cfg["backend"] = backend
     elif cmd == "voice":
         if not arg:

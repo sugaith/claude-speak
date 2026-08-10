@@ -94,6 +94,14 @@ How much of the reply gets spoken:
 
 ## Backends
 
+Switch with `/speak use <name>` — or `/speak gemini`, naming it directly.
+`backend`, `provider` and `engine` all work as aliases for `use`.
+
+```
+/speak use kokoro       # or: /speak kokoro
+/speak                  # confirm which one is active
+```
+
 | backend | quality | cost | offline |
 |---|---|---|---|
 | `gemini` (default) | best, prompt-steerable | ~$0.002/reply | no |
@@ -133,7 +141,7 @@ Gemini takes direction:
 speakctl status                     # current settings
 speakctl on | off
 speakctl mode prose|brief|smart
-speakctl backend gemini|say|kokoro
+speakctl use gemini|say|kokoro      # aliases: backend, provider, engine
 speakctl voice <name>               # voice for the active backend
 speakctl voices                     # list available voices
 speakctl model <id>                 # Gemini TTS model
