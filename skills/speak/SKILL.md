@@ -72,6 +72,8 @@ and offline but its Portuguese voices are weak.
 - `repeat` with no argument replays the *spoken* line verbatim from cache — the same
   words, not a fresh shaping. `repeat brief|prose|smart` re-shape the original reply.
 - Replay works even when muted: the Stop hook caches every reply regardless.
+- Saying an identical line again reuses the audio already on disk — instant and free.
+  Changing voice, model or style re-synthesizes.
 - `repeat <n>` counts main-thread replies backwards; subagent turns are skipped.
 - `gemini` and `kokoro` also work as bare engine names (`speakctl kokoro`); `say` does
   not, because `say <words>` speaks them.

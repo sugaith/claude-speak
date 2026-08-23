@@ -6,6 +6,7 @@ Config and runtime state live in $CLAUDE_SPEAK_HOME (default ~/.claude-speak),
 which is shared by every Claude Code config dir the installer wires up.
 """
 import base64
+import hashlib
 import json
 import os
 import re
@@ -20,6 +21,7 @@ HOME_DIR = os.environ.get("CLAUDE_SPEAK_HOME") or os.path.expanduser("~/.claude-
 CONFIG_PATH = os.path.join(HOME_DIR, "config.json")
 PID_PATH = os.path.join(HOME_DIR, ".playing.pid")
 OUT_WAV = os.path.join(HOME_DIR, ".out.wav")
+OUT_KEY_PATH = os.path.join(HOME_DIR, ".out.key")
 
 DEFAULTS = {
     "enabled": True,
@@ -242,6 +244,53 @@ def play(path):
     proc.wait()
 
 
+WAV_BACKENDS = ("gemini", "kokoro")
+
+
+def audio_key(text, cfg, backend=None):
+    """Identifies the audio .out.wav holds: the words *and* their delivery.
+
+    Voice, model and style all change how the same sentence comes out, so any
+    of them changing has to miss the cache.
+    """
+    name = backend or cfg["backend"]
+    parts = [name, text]
+    if name == "gemini":
+        parts += [cfg.get("gemini_voice", ""), cfg.get("gemini_model", ""),
+                  cfg.get("style") or ""]
+    else:
+        parts += [cfg.get("kokoro_voice", ""), cfg.get("kokoro_lang", "")]
+    return hashlib.sha256("\x00".join(parts).encode()).hexdigest()
+
+
+def remember_audio(text, cfg, backend=None):
+    """Tag the wav we just wrote, so an identical line can replay it."""
+    try:
+        with open(OUT_KEY_PATH, "w") as f:
+            f.write(audio_key(text, cfg, backend))
+    except OSError:
+        pass
+
+
+def replay(text, cfg, backend=None):
+    """Play the cached wav if it is exactly this audio. True if it played.
+
+    Saying the same line again is otherwise a second round trip to the TTS
+    backend for a file already sitting on disk.
+    """
+    name = backend or cfg["backend"]
+    if name not in WAV_BACKENDS or not os.path.exists(OUT_WAV):
+        return False
+    try:
+        with open(OUT_KEY_PATH) as f:
+            if f.read().strip() != audio_key(text, cfg, name):
+                return False
+    except OSError:
+        return False
+    play(OUT_WAV)
+    return True
+
+
 def write_wav(pcm, path, rate=24000):
     with wave.open(path, "wb") as w:
         w.setnchannels(1)
@@ -317,6 +366,9 @@ def speak(text, cfg, backend=None):
             raise
         print(f"[tts] {name} failed ({e}); falling back to say", file=sys.stderr)
         speak_say(text, cfg)
+        return
+    if name in WAV_BACKENDS:
+        remember_audio(text, cfg, name)
 
 
 def main():

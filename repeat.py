@@ -101,7 +101,9 @@ def run(argv):
         print(text)
         return
 
-    tts.speak(text, use_cfg)
+    # Same words, same voice as last time? The audio is already on disk.
+    if not tts.replay(text, use_cfg):
+        tts.speak(text, use_cfg)
     print(text)
 
 

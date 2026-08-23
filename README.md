@@ -185,7 +185,8 @@ Override the location with `CLAUDE_SPEAK_HOME`.
 - `stop-hook.py` — reads the hook payload, waits for the turn's closing assistant
   message to reach the transcript, de-dupes against the previously spoken one,
   shapes, speaks. Always exits 0 — a broken speaker must never break a turn.
-- `speak.py` — markdown cleanup, mode shaping, backend routing, playback.
+- `speak.py` — markdown cleanup, mode shaping, backend routing, playback, and the
+  one-clip audio cache.
 - `transcript.py` — locates this session's JSONL transcript and reads assistant
   turns out of it (subagent turns skipped).
 - `speakctl.py` — the CLI behind `/speak`; `repeat.py` backs its replay commands.
@@ -200,6 +201,14 @@ apart) for an assistant entry whose `uuid` it has not already handled, and says
 nothing if none shows up.
 
 The hook runs `async`, so speech never blocks a turn.
+
+Repeating a line does not pay for it twice. Every synthesized clip is written to
+`~/.claude-speak/.out.wav` and tagged in `.out.key` with the words *and* their
+delivery — backend, voice, model, style. Ask for exactly that audio again and it
+plays straight off disk: no API call, no cost, no wait. Measured on a 5.6s clip,
+`repeat` went from 10.2s to 5.6s — the whole difference being the round trip that
+no longer happens. Change the voice or the style and it re-synthesizes, as it
+should. `say` writes no wav and is never cached.
 
 Every reply is cached under `~/.claude-speak/sessions/<session-id>.json` even
 while muted, so `/speak repeat` still works after `/speak off`. State is keyed by
