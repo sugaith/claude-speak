@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Replay what Claude just said. Backs the /repeat skill."""
+"""Replay what Claude just said. Backs `speakctl repeat` and `speakctl say`."""
 import os
 import sys
 
@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import speak as tts  # noqa: E402
 import transcript  # noqa: E402
 
-USAGE = """usage: repeat [command]
+USAGE = """usage: speakctl repeat [command]
 
   (none)        say the last spoken line again, verbatim
   all           the full last reply, uncapped
@@ -18,8 +18,9 @@ USAGE = """usage: repeat [command]
   <n>           n replies back (1 = last, 2 = the one before, ...)
   back <n>      same as <n>
   list          show the last few replies without speaking
-  text <words>  speak arbitrary text
-  show          print what would be spoken, without speaking it"""
+  show          print what would be spoken, without speaking it
+
+  arbitrary words: speakctl say <words>"""
 
 MODES = ("brief", "prose", "smart")
 
@@ -60,7 +61,7 @@ def resolve(argv, cfg):
         _, spoken = tts.load_last()
         return spoken or tts.shape(last_reply(), cfg), slow
 
-    if cmd == "text":
+    if cmd in ("text", "say"):
         if not arg:
             sys.exit("need something to say")
         return arg, cfg
@@ -75,8 +76,7 @@ def resolve(argv, cfg):
     sys.exit(1)
 
 
-def main():
-    argv = sys.argv[1:]
+def run(argv):
     cfg = tts.load_config()
 
     if argv and argv[0].lower() in ("help", "-h", "--help"):
@@ -106,4 +106,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    run(sys.argv[1:])

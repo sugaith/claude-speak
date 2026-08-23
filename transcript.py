@@ -25,8 +25,12 @@ def find_transcript():
     return max(candidates, key=os.path.getmtime) if candidates else None
 
 
-def assistant_messages(path, limit=10):
-    """Main-thread assistant texts, newest first. Subagent turns are skipped."""
+def assistant_entries(path, limit=10, with_text=True):
+    """Main-thread assistant entries, newest first, as {"uuid", "text"} dicts.
+
+    Subagent turns are skipped. With `with_text`, so are entries carrying no
+    text -- a tool call on its own.
+    """
     try:
         with open(path) as f:
             lines = f.readlines()
@@ -38,7 +42,7 @@ def assistant_messages(path, limit=10):
         try:
             entry = json.loads(line)
         except ValueError:
-            continue
+            continue  # a half-written final line: the writer is still going
         if entry.get("type") != "assistant" or entry.get("isSidechain"):
             continue
         content = entry.get("message", {}).get("content", [])
@@ -47,13 +51,24 @@ def assistant_messages(path, limit=10):
         else:
             text = "\n".join(b.get("text", "") for b in content
                              if isinstance(b, dict) and b.get("type") == "text")
-        if text.strip():
-            out.append(text)
-            if len(out) >= limit:
-                break
+        if with_text and not text.strip():
+            continue
+        out.append({"uuid": entry.get("uuid", ""), "text": text})
+        if len(out) >= limit:
+            break
     return out
 
 
-def last_assistant_text(path):
-    msgs = assistant_messages(path, limit=1)
-    return msgs[0] if msgs else ""
+def assistant_messages(path, limit=10):
+    """Main-thread assistant texts, newest first."""
+    return [entry["text"] for entry in assistant_entries(path, limit)]
+
+
+def latest_assistant_entry(path):
+    """Newest main-thread assistant entry, tool-call-only ones included.
+
+    Empty text means the turn is still mid-flight -- its closing message has
+    not reached the transcript yet.
+    """
+    entries = assistant_entries(path, limit=1, with_text=False)
+    return entries[0] if entries else None
