@@ -55,7 +55,7 @@ With no arguments it prints current settings. `help` prints the full command lis
 
 ## Backends
 
-- **gemini** (default) — best voices, prompt-steerable via `style`, ~$0.002/reply, needs `GEMINI_API_KEY`
+- **gemini** (default) — best voices, prompt-steerable via `style`, ~0.2 cents/reply, needs `GEMINI_API_KEY`
 - **say** — macOS built-in, free, offline, automatic fallback if the others fail
 - **kokoro** — local open model; needs `pip install kokoro soundfile` and `brew install espeak-ng`
 
