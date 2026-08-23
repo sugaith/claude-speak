@@ -1,23 +1,24 @@
 ---
 name: speak
-description: Control spoken replies (TTS). Turn Claude's voice on/off, switch how much gets spoken (prose/brief/smart), change backend (Gemini/macOS say/Kokoro), pick a voice, set delivery style, or test the output. Use when the user says "speak", "talk to me", "voice on/off", "read your replies", "change the voice", "stop talking", or invokes /speak.
+description: "Speak Claude's replies out loud (TTS), and replay them. Sub-commands: status, on, off, stop, mode prose|brief|smart, use gemini|say|kokoro, voice, voices, model, style, lang, test, reset, repeat, repeat all, repeat brief|prose|smart, repeat slow, repeat <n>, repeat list, repeat show, say <words>."
 ---
 
 # Speak
 
 A Stop hook (`~/.claude-speak/bin/stop-hook.py`) speaks the last assistant message
-after every turn. This skill is the control surface for it. To replay something
-already said, use the `repeat` skill instead.
+after every turn. This skill is the control surface for it, and for replaying
+anything already said.
 
 ## How to run
 
-Run the control CLI and report its output verbatim:
+Run the CLI and report its output verbatim:
 
 ```
-python3 ~/.claude-speak/bin/speakctl.py <args>
+python3 ~/.claude-speak/bin/speakctl.py <sub-command>
 ```
 
-With no arguments it prints current settings. `help` prints the full command list.
+With no arguments it prints current settings. `help` prints the full command list,
+`repeat help` the replay ones.
 
 ## Mapping what the user says
 
@@ -37,6 +38,14 @@ With no arguments it prints current settings. `help` prints the full command lis
 | "speak Portuguese" | `lang pt` |
 | "sound calmer/excited/etc" | `style Say it <adjective>:` |
 | "test it" | `test` |
+| "repeat", "say that again", "I missed that" | `repeat` |
+| "read the whole thing again", "all of it" | `repeat all` |
+| "slower", "I couldn't follow" | `repeat slow` |
+| "summarize what you said" | `repeat smart` |
+| "what did you say before that" | `repeat 2` (or `3`, ...) |
+| "what have you been saying" | `repeat list` |
+| "don't say it, just show me" | `repeat show` |
+| "say <something>" | `say <something>` |
 
 ## Modes
 
@@ -60,3 +69,9 @@ and offline but its Portuguese voices are weak.
   doesn't cover (`max_chars_prose`, `max_chars_brief`, `summarizer_model`).
 - The hook is async, so speech never blocks a turn.
 - Backend failures fall back to `say` rather than going silent.
+- `repeat` with no argument replays the *spoken* line verbatim from cache — the same
+  words, not a fresh shaping. `repeat brief|prose|smart` re-shape the original reply.
+- Replay works even when muted: the Stop hook caches every reply regardless.
+- `repeat <n>` counts main-thread replies backwards; subagent turns are skipped.
+- `gemini` and `kokoro` also work as bare engine names (`speakctl kokoro`); `say` does
+  not, because `say <words>` speaks them.

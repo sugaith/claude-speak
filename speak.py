@@ -96,9 +96,13 @@ def _prune_states():
         pass
 
 
-def cache_last(raw, spoken, sid=None):
-    """Remember the last reply so /repeat can replay it without the hook."""
-    save_state(sid, raw=raw, spoken=spoken)
+def cache_last(raw, spoken, sid=None, uuid=None):
+    """Remember the last reply so `repeat` can replay it without the hook.
+
+    `uuid` is the transcript entry it came from -- how the next Stop hook tells
+    a fresh reply from the one it already handled.
+    """
+    save_state(sid, raw=raw, spoken=spoken, uuid=uuid)
 
 
 def load_last(sid=None):

@@ -4,7 +4,7 @@ Claude Code reads its replies out loud.
 
 A `Stop` hook grabs Claude's last message, strips everything that sounds terrible
 spoken (code fences, tables, file paths, emoji), and pipes it to a TTS backend.
-Control it from inside Claude with `/speak`, replay it with `/repeat`.
+One skill controls all of it from inside Claude: `/speak`.
 
 ```
 /speak                  # what's it set to?
@@ -13,10 +13,11 @@ Control it from inside Claude with `/speak`, replay it with `/repeat`.
 /speak voice Puck       # different voice
 /speak lang pt          # Portuguese
 
-/repeat                 # say that again
-/repeat all             # the whole reply this time
-/repeat slow            # ...slower
-/repeat 3               # three replies back
+/speak repeat           # say that again
+/speak repeat all       # the whole reply this time
+/speak repeat slow      # ...slower
+/speak repeat 3         # three replies back
+/speak say hello there  # speak arbitrary words
 ```
 
 ## Install
@@ -37,9 +38,10 @@ dir speaks with the same voice.
 
 Already-running sessions load the hook after you open `/hooks` once, or restart.
 
-The installer updates existing `skills/` symlinks in place, but a running session
-only enumerates slash commands at startup — restart once for `/speak` and
-`/repeat` to appear.
+The installer updates existing `skills/` symlinks in place — including dropping
+links to skills it no longer ships, which is how the old separate `/repeat` skill
+goes away on upgrade. A running session only enumerates slash commands at startup,
+so restart once for the change to show.
 
 ## Gemini API key
 
@@ -152,20 +154,23 @@ speakctl stop                       # kill playback
 speakctl reset
 ```
 
+Replay lives under `repeat` (alias: `again`), so `mode brief` — a setting — never
+collides with `repeat brief` — a one-off re-shaping:
+
 ```
-repeat                              # last spoken line again, verbatim
-repeat all                          # the full last reply, uncapped
-repeat brief|prose|smart            # re-shape the last reply
-repeat slow                         # slower delivery
-repeat <n>                          # n replies back (1 = last)
-repeat list                         # recent replies, without speaking
-repeat text <words>                 # speak arbitrary text
-repeat show [cmd]                   # print instead of speaking
+speakctl repeat                     # last spoken line again, verbatim
+speakctl repeat all                 # the full last reply, uncapped
+speakctl repeat brief|prose|smart   # re-shape the last reply
+speakctl repeat slow                # slower delivery
+speakctl repeat <n>                 # n replies back (1 = last)
+speakctl repeat list                # recent replies, without speaking
+speakctl repeat show [cmd]          # print instead of speaking
+speakctl say <words>                # speak arbitrary text
 ```
 
-Both live in `~/.claude-speak/bin/`. Run them directly as
+It lives in `~/.claude-speak/bin/`. Run it directly as
 `python3 ~/.claude-speak/bin/speakctl.py <args>` — or just say what you want to
-Claude and let the `/speak` and `/repeat` skills do the mapping.
+Claude and let the `/speak` skill do the mapping.
 
 ## Config
 
@@ -177,21 +182,28 @@ Override the location with `CLAUDE_SPEAK_HOME`.
 
 ## How it works
 
-- `stop-hook.py` — reads the hook payload, pulls the last main-thread assistant
-  message out of the transcript, de-dupes against the previously spoken message,
+- `stop-hook.py` — reads the hook payload, waits for the turn's closing assistant
+  message to reach the transcript, de-dupes against the previously spoken one,
   shapes, speaks. Always exits 0 — a broken speaker must never break a turn.
 - `speak.py` — markdown cleanup, mode shaping, backend routing, playback.
 - `transcript.py` — locates this session's JSONL transcript and reads assistant
   turns out of it (subagent turns skipped).
-- `speakctl.py` / `repeat.py` — the CLIs behind `/speak` and `/repeat`.
-- `skills/*/SKILL.md` — teach Claude to map "stop talking" / "different voice" /
-  "say that again, slower" onto the right command.
+- `speakctl.py` — the CLI behind `/speak`; `repeat.py` backs its replay commands.
+- `skills/speak/SKILL.md` — teaches Claude to map "stop talking" / "different
+  voice" / "say that again, slower" onto the right command.
+
+Claude Code appends that closing message to the transcript *while the hook is
+already running*, so reading the file once loses a race about half the time and
+comes back with the previous reply — and, since the de-dupe hash lagged with it,
+every following turn stayed one behind. The hook now polls (3s budget, 50ms
+apart) for an assistant entry whose `uuid` it has not already handled, and says
+nothing if none shows up.
 
 The hook runs `async`, so speech never blocks a turn.
 
 Every reply is cached under `~/.claude-speak/sessions/<session-id>.json` even
-while muted, so `/repeat` still works after `/speak off`. State is keyed by
-session: run five Claude sessions at once and each `/repeat` replays its own
+while muted, so `/speak repeat` still works after `/speak off`. State is keyed by
+session: run five Claude sessions at once and each `/speak repeat` replays its own
 last reply, not whichever session finished most recently. Stale session files
 are pruned after 30 days.
 

@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Control CLI for the TTS Stop hook. Backs the /speak skill."""
+"""The one CLI behind /speak: controls the TTS Stop hook and replays what it said."""
 import json
 import os
 import subprocess
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import repeat  # noqa: E402
 import speak as tts  # noqa: E402
 
 GEMINI_VOICES = [
@@ -19,6 +20,9 @@ GEMINI_VOICES = [
 MODES = ("prose", "brief", "smart", "off")
 BACKENDS = ("gemini", "say", "kokoro")
 BACKEND_CMDS = ("use", "backend", "provider", "engine")
+# Bare-name shortcut for engines. `say` is left out: it means "say these words".
+BACKEND_NAMES = ("gemini", "kokoro")
+REPLAY_CMDS = ("repeat", "again")
 
 USAGE = """usage: speakctl <command>
 
@@ -34,7 +38,12 @@ USAGE = """usage: speakctl <command>
   voices                 list voices for the active backend
   test [text]            speak a sample now
   stop                   stop playback
-  reset                  restore defaults"""
+  reset                  restore defaults
+
+  repeat [command]       say a reply again (alias: again) -- `repeat help`
+                         for all of it: all, brief|prose|smart, slow, <n>,
+                         list, show
+  say <words>            speak arbitrary words"""
 
 
 def show(cfg):
@@ -83,6 +92,12 @@ def main():
         tts.stop_playing()
         print("playback stopped")
         return
+    if cmd in REPLAY_CMDS:
+        repeat.run(argv[1:])
+        return
+    if cmd == "say":
+        repeat.run(["say"] + argv[1:])
+        return
 
     if cmd == "on":
         cfg["enabled"] = True
@@ -96,8 +111,8 @@ def main():
             sys.exit(f"mode must be one of: {', '.join(MODES)}")
         cfg["mode"] = mode
         cfg["enabled"] = mode != "off"
-    elif cmd in BACKEND_CMDS or cmd in BACKENDS:
-        backend = cmd if cmd in BACKENDS else arg.lower()
+    elif cmd in BACKEND_CMDS or cmd in BACKEND_NAMES:
+        backend = cmd if cmd in BACKEND_NAMES else arg.lower()
         if backend not in BACKENDS:
             sys.exit(f"engine must be one of: {', '.join(BACKENDS)}")
         cfg["backend"] = backend

@@ -49,6 +49,13 @@ for CFG in "${TARGETS[@]}"; do
   [ -d "$CFG" ] || { echo "skip $CFG (not a directory)"; continue; }
 
   mkdir -p "$CFG/skills"
+  # Drop links to skills we no longer ship, so removed ones stop showing up.
+  for LINK in "$CFG"/skills/*; do
+    [ -L "$LINK" ] || continue
+    case "$(readlink "$LINK")" in
+      "$SRC"/skills/*) rm -f "$LINK" ;;
+    esac
+  done
   for SKILL in "$SRC"/skills/*/; do
     NAME="$(basename "$SKILL")"
     rm -rf "$CFG/skills/$NAME"
